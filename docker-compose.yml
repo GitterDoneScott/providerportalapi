@@ -3,7 +3,7 @@ version: "3"
 services:
   
   providerportalapi:
-    image: providerportalapi:latest
+    image: gitterdone/providerportalapi:latest
     depends_on:
       - selenium-hub
     ports:
@@ -13,6 +13,8 @@ services:
       - DRIVER_EXECUTOR=http://selenium-hub:4444/wd/hub
       - PROVIDER_PORTAL_USERNAME=${PROVIDER_PORTAL_USERNAME:-SUBFAIL}
       - PROVIDER_PORTAL_PASSWORD=${PROVIDER_PORTAL_PASSWORD:-SUBFAIL}
+    labels:
+      - "com.centurylinklabs.watchtower.scope=mydev" #watchtower will reload on changes to dockerhub image
 
   selenium-hub:
     image: selenium/hub:4.0.0-beta-1-prerelease-20201208
