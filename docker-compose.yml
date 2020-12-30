@@ -1,0 +1,63 @@
+#create an .env file with the necessary variables, one per line example : PROVIDER_PORTAL_URL=https://www.example.com
+version: "3"
+services:
+  
+  providerportalapi:
+    image: providerportalapi:latest
+    depends_on:
+      - selenium-hub
+    ports:
+      - "80:80"  #/docs to see the api documentation
+    environment:
+      - PROVIDER_PORTAL_URL=${PROVIDER_PORTAL_URL:-SUBFAIL}
+      - DRIVER_EXECUTOR=http://selenium-hub:4444/wd/hub
+      - PROVIDER_PORTAL_USERNAME=${PROVIDER_PORTAL_USERNAME:-SUBFAIL}
+      - PROVIDER_PORTAL_PASSWORD=${PROVIDER_PORTAL_PASSWORD:-SUBFAIL}
+
+  selenium-hub:
+    image: selenium/hub:4.0.0-beta-1-prerelease-20201208
+    container_name: selenium-hub
+    ports:
+      - "4442:4442"
+      - "4443:4443"
+      - "4444:4444"
+
+  firefox:
+    image: selenium/node-firefox:4.0.0-beta-1-prerelease-20201208
+    volumes:
+      - /dev/shm:/dev/shm
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+    ports:
+      - "5900:5900" #VNC port, password secret
+  
+  # chrome:
+  #   image: selenium/node-chrome:4.0.0-beta-1-prerelease-20201208
+  #   volumes:
+  #     - /dev/shm:/dev/shm
+  #   depends_on:
+  #     - selenium-hub
+  #   environment:
+  #     - SE_EVENT_BUS_HOST=selenium-hub
+  #     - SE_EVENT_BUS_PUBLISH_PORT=4442
+  #     - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+  #   ports:
+  #     - "6900:5900"
+
+  # opera:
+  #   image: selenium/node-opera:4.0.0-beta-1-prerelease-20201208
+  #   volumes:
+  #     - /dev/shm:/dev/shm
+  #   depends_on:
+  #     - selenium-hub
+  #   environment:
+  #     - SE_EVENT_BUS_HOST=selenium-hub
+  #     - SE_EVENT_BUS_PUBLISH_PORT=4442
+  #     - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+  #   ports:
+  #     - "6902:5900"
+
