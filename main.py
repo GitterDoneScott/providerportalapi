@@ -3,6 +3,7 @@
 import os
 import sys
 import selenium
+import logging
 from fastapi import FastAPI,HTTPException, Response
 from http import HTTPStatus
 from typing import Optional
@@ -13,6 +14,9 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
+import pandas as pd
+
+LOGGER = logging.getLogger(__name__)
 
 USERNAME=os.getenv('PROVIDER_PORTAL_USERNAME', 'NOT FOUND')
 PASSWORD=os.getenv('PROVIDER_PORTAL_PASSWORD', 'NOT FOUND')
@@ -36,7 +40,7 @@ class ProviderPortalBase():
         # cleanup
         #self.driver.close()
         self.driver.quit()
-        print('Driver closed browser')
+        LOGGER.debug('Driver closed browser')
         
     def login(self):
         HOMEPAGE_USERNAME_TEXTBOX=(By.ID, "asPrimary_ctl00_txtLoginId")
@@ -86,18 +90,31 @@ class OrderHistory(ProviderPortalBase):
         ORDER_HISTORY_TIMEFRAME=(By.XPATH,"//select[@id='asPrimary_ctl00_DdlWithin']/option[@value='90']") #90 days
         ORDER_HISTORY_ORDER_STATUS=(By.XPATH,"//select[@id='asPrimary_ctl00_DdlStatusMyOrdersRbm']/option[@value='']")  #all
         ORDER_HISTORY_GO_BUTTON=(By.ID, "asPrimary_ctl00_BtnSearch")
-        ORDER_HISTORY_NO_RESULTS_MSG=(By.XPATH,"//div[@id='vsMessages' and contains(text(),'No Results Found.')]")
-
+        ORDER_HISTORY_RESULTS=(By.XPATH,"//table[@id='asPrimary_ctl00_gvPreauthReqQueueList'] | //div[@id='vsMessages' and contains(text(),'No Results Found.')]")
+        
         self.click(PORTAL_HOME_ORDER_HISTORY_LINK)
         self.click(ORDER_HISTORY_SHOW_ME)
         self.click(ORDER_HISTORY_TYPE)
         self.click(ORDER_HISTORY_TIMEFRAME)
         self.click(ORDER_HISTORY_ORDER_STATUS)
         self.click(ORDER_HISTORY_GO_BUTTON)
-        if self.is_visible(ORDER_HISTORY_NO_RESULTS_MSG):
-            print('No Results Found')
-            return None
-     
+        
+        try:           
+            if self.is_visible(ORDER_HISTORY_RESULTS):
+                LOGGER.debug('Found something')
+                resultsElement=self.is_enabled(ORDER_HISTORY_RESULTS)
+                LOGGER.debug('tag: ', resultsElement.tag_name)
+                if resultsElement.tag_name == "div":
+                    LOGGER.debug('No Results Found')
+                    return None
+                else:              
+                    LOGGER.debug('Results table found')
+                    resultsTable=pd.read_html(resultsElement.get_attribute('outerHTML'))
+                    print(resultsTable)
+                    return resultsTable              
+        except Exception as e:
+            LOGGER.error('ERROR: ',e)
+            raise
 
 app = FastAPI()
 
@@ -118,5 +135,5 @@ def order_history():
         print('ERROR: ', e)
         if myOrderHistory:
             myOrderHistory.tearDown()
-        raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail="{e}")
+        raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=e)
 
